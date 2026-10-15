@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Photo Delete AIUI Bridge - companion HTTP bridge for Rokid Glasses AIUI gallery access
+  Copyright (C) 2026 OSAGEM
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+  SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+<!--
+  ============================================================================
+  DEFAULT (fallback) resources — **this file is the translation source of truth**.
+  ============================================================================
+  Standard Android layout:
+    · res/values/strings.xml      → default/fallback locale (English here)
+    · res/values-zh/strings.xml   → Chinese (Simplified; `-zh` also covers
+                                    Traditional, which we want since the wording
+                                    is shared)
+  A device whose system locale is Chinese resolves `values-zh/`; **every other
+  locale falls back to this file**. That is what makes "Chinese on Chinese
+  systems, English on English systems" work — no code branches involved.
+
+  RULES for contributors:
+    1. NEVER hardcode user-visible text in Java. Always `getString(R.string.*)`,
+       otherwise the text stops following the system language.
+    2. Keep the key set identical in values/ and values-zh/ (add to both).
+    3. Developer-facing diagnostics (the /log debug lines and Logcat) are
+       intentionally NOT localized — see BridgeServer.log().
+
+  Note: the API layer (the HTTP JSON bodies under /list, /info, /delete …) is a
+  machine contract consumed by the AIUI agent, so its field values stay in fixed
+  English and are deliberately NOT localized.
+
+  Naming: the product is referred to as "AIUI" (Rokid's agent runtime), so the
+  service is "Photo Delete AIUI Service" — not "AI Agent Service".
+  ============================================================================
+-->
+<resources>
+
+    <!-- Launcher label, task-switcher title, and the notification channel name -->
+    <string name="app_name">Photo Delete AIUI Service</string>
+
+    <!-- Intro paragraph on the first screen (what the service is for) -->
+    <string name="desc_intro">Companion service for the “Photo Delete” AIUI. Enable it once, and you can browse or delete photos and videos on Rokid Glasses by voice, right inside the AIUI.</string>
+
+    <!-- Bottom button: tappable “Enable” → non-tappable “Enabled” -->
+    <string name="btn_enable">Enable</string>
+    <string name="btn_enabled">Enabled</string>
+
+    <!-- Countdown shown once the service is confirmed running (trailing number = seconds left) -->
+    <string name="toast_countdown">Service enabled. Open the “Photo Delete” agent to use it. %1$d</string>
+
+    <!-- Status line while the service is starting up -->
+    <string name="hint_starting">Starting…</string>
+
+    <!-- Persistent first-screen guide shown while “All files access” is missing
+         (two lines: heading + body). The user can read it fully before tapping
+         Enable, which is why nothing is shown after jumping to the system page. -->
+    <string name="hint_permission">Guide: enabling “All files access”\nOn the RG temple bar, tap once to open the system permission page; swipe forward to move focus onto the switch, tap once to turn it on, then double-tap to go back.</string>
+
+    <!-- Shown when the service could not be reached after starting -->
+    <string name="hint_start_failed">Service failed to start. Tap Enable to retry.</string>
+
+    <!-- Last-resort hint: this ROM has no All-files-access settings page at all -->
+    <string name="hint_no_settings">No “All files access” settings page on this device.\nRun on a PC: adb shell appops set %1$s MANAGE_EXTERNAL_STORAGE allow</string>
+
+    <!-- Persistent foreground-service notification, permission already granted -->
+    <string name="notif_title">Photo Delete AIUI Service running</string>
+    <string name="notif_text">Running · serving album access to the AIUI</string>
+    <!-- Same notification while the “All files access” permission is still missing,
+         so the user does not think album access is already live -->
+    <string name="notif_title_waiting">Photo Delete AIUI Service awaiting permission</string>
+    <string name="notif_text_waiting">Waiting for “All files access”. The service starts automatically once granted.</string>
+
+</resources>

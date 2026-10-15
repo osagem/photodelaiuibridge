@@ -1,0 +1,31 @@
+# ============================================================
+#  .gitignore —— 构建产物与密钥凭据绝不提交
+# ============================================================
+
+# ---- 密钥 / 凭据（★ 最重要：一旦入库即视为泄露）----
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.pem
+*.pk8
+*.key
+keystore.properties
+keystore.external.properties
+
+# ---- 构建产物 ----
+build/
+*.apk
+*.aab
+*.apk.idsig
+*.idsig
+*.dex
+*.class
+
+# ---- 编辑器 / 系统 ----
+.idea/
+*.iml
+.gradle/
+local.properties
+.DS_Store
+Thumbs.db

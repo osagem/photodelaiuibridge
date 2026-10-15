@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Photo Delete AIUI Bridge - companion HTTP bridge for Rokid Glasses AIUI gallery access
+  Copyright (C) 2026 OSAGEM
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+  SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+<!--
+  ============================================================================
+  中文（简体）资源。系统语言为中文时自动生效。
+  ============================================================================
+  这是 `res/values/strings.xml`（默认 = 英文）的**中文翻译**，键名必须与之逐一对齐。
+  限定符用 `-zh` 而不是 `-zh-rCN`：简繁共用同一套措辞时，`-zh` 能同时覆盖
+  简体与繁体中文系统；若将来简繁需要分叉，再增补 `values-zh-rTW` 等即可。
+
+  注意：`/log` 排障日志与 Logcat 属开发者诊断信息，**按 Android 惯例不做本地化**；
+  HTTP 接口（/list、/info、/delete …）的 JSON 字段值是给智能体解析的**机器契约**，
+  固定英文、同样不随系统语言变化。
+  ============================================================================
+-->
+<resources>
+
+    <!-- 桌面图标名 / 最近任务标题 / 通知渠道名 -->
+    <string name="app_name">照片删除智能体服务</string>
+
+    <!-- 首屏说明正文（本程序是干什么的） -->
+    <string name="desc_intro">本程序为“照片删除”智能体配套服务，启用一次即可实现在“照片删除”智能体内通过语音浏览查看或删除RokidGlasses眼镜端的照片、视频</string>
+
+    <!-- 底部按钮：可点击的「启用」→ 不可点击的「已启用」 -->
+    <string name="btn_enable">启用</string>
+    <string name="btn_enabled">已启用</string>
+
+    <!-- 服务确认运行后的倒计时提示（末尾数字 = 剩余秒数） -->
+    <string name="toast_countdown">服务已启用，打开“照片删除”智能体使用吧。%1$d</string>
+
+    <!-- 服务启动中的状态行 -->
+    <string name="hint_starting">启动中…</string>
+
+    <!-- 未授权时首屏底部**常驻**的操作指引（两行：标题 + 正文）。
+         用户在点「启用」前即可完整读完，因此跳转系统页后不再需要任何浮层提示。 -->
+    <string name="hint_permission">启用【所有文件访问】权限操作指引\nRG镜腿上单击进入系统权限页，镜腿上向前滑动移动焦点到开关上，单击开启，再双击返回即可</string>
+
+    <!-- 服务启动后仍探测不通时的提示 -->
+    <string name="hint_start_failed">服务未能启动，请点「启用」重试</string>
+
+    <!-- 兜底提示：本 ROM 完全没有「所有文件访问」设置页 -->
+    <string name="hint_no_settings">系统未提供「所有文件访问」设置页\n请用 PC 执行：adb shell appops set %1$s MANAGE_EXTERNAL_STORAGE allow</string>
+
+    <!-- 常驻前台服务通知（已授权） -->
+    <string name="notif_title">照片删除智能体服务运行中</string>
+    <string name="notif_text">服务运行中 · 供智能体访问相册</string>
+    <!-- 尚未授权时的同一条通知，避免用户误以为相册已可读写 -->
+    <string name="notif_title_waiting">照片删除智能体服务等待授权</string>
+    <string name="notif_text_waiting">等待「所有文件访问」授权，授权后自动开始服务</string>
+
+</resources>

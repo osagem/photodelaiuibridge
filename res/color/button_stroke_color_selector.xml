@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Photo Delete AIUI Bridge - companion HTTP bridge for Rokid Glasses AIUI gallery access
+  Copyright (C) 2026 OSAGEM
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+  SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+<!-- 按钮描边/文字颜色选择器。
+     ★ 与 photoDel4rokidglasses 工程 res/color/button_stroke_color_selector.xml 保持**逐字一致**：
+       常态 40% 绿 → 选中/聚焦 80% 绿 → 按下 100% 绿。
+     （该文件同时用于 stroke 与 textColor，所以描边与文字永远同色。） -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下状态 -->
+    <item android:state_pressed="true" android:color="@color/rgrcolor_pressed" />
+    <!-- 选中状态 -->
+    <item android:state_selected="true" android:color="@color/rgrcolor_selected" />
+    <item android:state_focused="true" android:color="@color/rgrcolor_selected" />
+    <!-- 常态 -->
+    <item android:color="@color/rgrcolor_normal" />
+</selector>

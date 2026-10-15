@@ -1,0 +1,38 @@
+<!--
+  Photo Delete AIUI Bridge - companion HTTP bridge for Rokid Glasses AIUI gallery access
+  Copyright (C) 2026 OSAGEM
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+  SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="192dp"
+    android:height="192dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+  <path
+      android:pathData="M30,30H51L71,10H121L141,30H162C170.04,30 177.43,33.43 183.12,39.13C188.81,44.82 192,51.95 192,60V152C192,160.05 188.81,167.42 183.12,173.11C177.43,178.8 170.04,182 162,182L30,182C21.96,182 14.56,178.8 8.88,173.11C3.19,167.42 0,160.05 0,152V60C0,51.95 3.19,44.82 8.88,39.13C14.56,33.43 21.96,30 30,30ZM75,20L55,40H30C24.64,40 19.82,42.48 16.02,46.28C12.23,50.07 10,54.63 10,60V152C10,157.37 12.23,162.16 16.02,165.96C19.82,169.75 24.64,172 30,172H162C167.36,172 172.18,169.75 175.98,165.96C179.76,162.16 182,157.37 182,152V60C182,54.63 179.76,50.07 175.98,46.28C172.18,42.48 167.36,40 162,40H137L117,20H75Z"
+      android:fillColor="#40FF5E"
+      android:fillAlpha="0.5"/>
+  <path
+      android:pathData="M120,82L100,82L92,82V90V98H114V108L92,108V124L120,124V134L81.97,133.97L82,72L100,72H120V82Z"
+      android:fillColor="#40FF5E"/>
+  <path
+      android:pathData="M140,124L168,124V134L128,134V72L140,72V124Z"
+      android:fillColor="#40FF5E"/>
+  <path
+      android:pathData="M67.02,72V134H44.62C42.75,134 41.13,133.74 39.76,133.23C38.44,132.68 37.35,131.82 36.5,130.67C35.64,129.52 35,128.05 34.58,126.26C34.19,124.42 34,122.22 34,119.66V105.34C34,102.78 34.19,100.6 34.58,98.81C35,96.97 35.64,95.48 36.5,94.33C37.35,93.18 38.44,92.34 39.76,91.83C41.13,91.28 42.75,91 44.62,91H57V72L67.02,72ZM43.73,112.48C43.73,115.04 43.83,117.09 44.05,118.62C44.26,120.12 44.62,121.27 45.14,122.08C45.69,122.89 46.44,123.42 47.38,123.68C48.31,123.89 49.51,124 50.96,124H57V101H47.76C47.03,101 46.42,101.11 45.9,101.32C45.39,101.49 44.97,101.85 44.62,102.41C44.33,102.92 44.09,103.62 43.92,104.52C43.79,105.42 43.73,106.57 43.73,107.98V112.48Z"
+      android:fillColor="#40FF5E"/>
+</vector>

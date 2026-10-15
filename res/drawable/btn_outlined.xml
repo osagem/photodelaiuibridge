@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Photo Delete AIUI Bridge - companion HTTP bridge for Rokid Glasses AIUI gallery access
+  Copyright (C) 2026 OSAGEM
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published by
+  the Free Software Foundation, version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+  SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+<!-- 描边按钮背景（Outlined Button）。
+     ★ 视觉规格对齐 photoDel4rokidglasses 首屏底部按钮
+       （Material `Widget.App.Button.OutlinedButton`：cornerRadius 12px + strokeWidth 2px + 透明底）。
+
+     ★★ 焦点表达方式（关键，勿改）：相册工程用 `stateListAnimator` 把 MaterialButton 的
+       `strokeWidth` 在**获得焦点时 2px → 4px**（100ms）。原因是 **Rokid Glasses 为单绿显示，
+       纯靠颜色变化根本看不出焦点**（原注释 osagem），只能靠"边框变粗"表达焦点。
+       桥工程无 Material 依赖，改用框架自带的 **StateListDrawable** 达到同样效果：
+       聚焦态整条描边加粗到 4px。差异仅在于这里是**瞬时切换**（无 100ms 补间），
+       在 240dpi 屏幕上肉眼等价，且免去对 MaterialButton 私有属性的依赖。
+
+     单位刻意用 **px**（与相册工程一致，不用 dp）：12px 圆角 / 2px 常态描边 / 4px 聚焦描边。
+     本机 240dpi 下 12px = 8dp，圆角观感更收敛。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 获得焦点：描边加粗到 4px（相册按钮的焦点表达） -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="12px" />
+            <stroke
+                android:width="4px"
+                android:color="@color/button_stroke_color_selector" />
+        </shape>
+    </item>
+    <!-- 常态：描边 2px -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="12px" />
+            <stroke
+                android:width="2px"
+                android:color="@color/button_stroke_color_selector" />
+        </shape>
+    </item>
+</selector>
