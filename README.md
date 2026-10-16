@@ -7,6 +7,14 @@
 
 本项目是配套的**伴生服务 App**（Android，包名 `com.osagem.photodelaiuibridge`，显示名「照片删除智能体服务 / Photo Delete AIUI Service」）。
 
+<p align="center">
+  <img src="docs/images/ui5-btn-2x.png" width="31%" alt="首次引导页（中文）：启用【所有文件访问】权限操作指引">
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/images/ui6-en-fallback.png" width="31%" alt="首次引导页（英文兜底）：Enable guide for All files access">
+</p>
+
+<p align="center"><sub>▲ 首次引导页：左 · 中文 ／ 右 · 英文兜底 —— 单击「启用 / Enable」进入系统「所有文件访问」授权页，镜腿操作步骤见下方「下载与安装」。</sub></p>
+
 ---
 
 ## 为什么需要这个 App
