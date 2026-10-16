@@ -3,7 +3,7 @@
 [![Release](https://img.shields.io/github/v/release/osagem/photodelaiuibridge)](https://github.com/osagem/photodelaiuibridge/releases)
 [![Platform](https://img.shields.io/badge/platform-Rokid%20Glasses-blue)](https://www.rokid.com/)
 
-在 **Rokid Glasses** 上，让 AIUI 智能体「照片删除」通过语音浏览、播放与删除系统相册（DCIM）中的照片和视频。
+在 **Rokid Glasses** 上，让 AIUI 智能体[「照片删除」](https://github.com/osagem/photodelaiuiagent)通过语音浏览、播放与删除系统相册（DCIM）中的照片和视频。
 
 本项目是配套的**伴生服务 App**（Android，包名 `com.osagem.photodelaiuibridge`，显示名「照片删除智能体服务 / Photo Delete AIUI Service」）。
 
@@ -181,7 +181,9 @@ A：确认 App 已装且已授权（`/ping` 通），另外设备上不应存在
 
 ## 相关项目
 
-- 配套 AIUI 智能体「照片删除」（DCIM 桥接版）—— 智能体工程的源码不在本仓库。
+- **智能体侧源码**（GitHub）：[**osagem/photodelaiuiagent**](https://github.com/osagem/photodelaiuiagent)
+  —— AIUI 智能体「照片删除」（DCIM 桥接版），语音 + 镜腿手势浏览 / 播放 / 删除，AGPL-3.0。
+  本仓库只提供配套的**桥 App**，**不含智能体源码**；安装智能体请见该仓库的 Releases。
 - 智能体运行时的能力边界（为何必须走 HTTP 桥）已在上文「为什么需要这个 App」中说明。
 
 ---
@@ -208,6 +210,10 @@ The AIUI runtime has **no gallery API** and no way to launch another app, so a l
 HTTP bridge is the only practical channel: this app holds the storage permission and exposes a
 loopback-only HTTP API (`/list`, `/media/<id>` with Range support, `/delete/<id>`, …) that the
 agent consumes via `wx.request` and `<image>` / `<video>`.
+
+The agent itself is a separate open-source project:
+**[osagem/photodelaiuiagent](https://github.com/osagem/photodelaiuiagent)** (AGPL-3.0). This
+repository ships only the bridge app — the agent needs it installed before it can reach the gallery.
 
 Download the signed APK from [Releases](https://github.com/osagem/photodelaiuibridge/releases),
 install with `adb install -r`, then tap **Enable** on the glasses and turn on
