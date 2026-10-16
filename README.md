@@ -69,6 +69,7 @@ Rokid Glasses 的 **AIUI 智能体运行时不提供任何系统相册读写 API
 | 相册索引 | 扫描 `DCIM/Camera`（照片）与 `Movies/Camera`（视频） |
 | 浏览 | 智能体侧网格/列表展示（缩略图走 `/thumb`，视频封面走同一接口） |
 | 播放 | `/media/<id>` 支持 HTTP Range，供 `<video>` 流式播放 |
+| 视频转码 | AIUI 运行时只认 H.264/AVC + AAC-LC 的 progressive MP4，而眼镜实拍是 HEVC —— `/probe` 探测后 `/transcode` 硬解→GL 缩放→硬编转出 480p AVC 副本（缓存于应用私有目录，LRU 上限 1GB；支持任务落盘续转与取消） |
 | 删除 | 二次确认后 `DELETE`，直接 `File.delete()` |
 | 常驻 | 前台服务（`dataSync`）+ 开机自启，空闲几乎不耗电（实测 60 秒 CPU 增量 0 ticks） |
 
@@ -81,6 +82,13 @@ Rokid Glasses 的 **AIUI 智能体运行时不提供任何系统相册读写 API
 | `GET` | `/list` | 媒体清单（JSON） |
 | `GET` | `/thumb/<id>` | 缩略图 |
 | `GET` | `/media/<id>` | 原图 / 视频流（支持 Range） |
+| `GET` | `/media/<id>?fmt=avc` | 可播版本：H.264 源直接回原文件；HEVC 源回转码缓存，无缓存返回 409 + `need-transcode` |
+| `GET` | `/probe/<id>` | 可播性探测（容器/编码/旋转/时长/目标尺寸/是否已有缓存，毫秒级） |
+| `GET\|POST` | `/transcode/<id>` | 提交转码任务（幂等、异步；`?force=1` 强制重转） |
+| `GET` | `/transcode/status/<id>` | 转码进度（state/progress/speedX/error） |
+| `GET` | `/transcode/cancel/<id>` | 取消转码任务 |
+| `GET` | `/cache` | 转码缓存用量（`POST /cache/purge` 按 LRU 清理） |
+| `POST` | `/scan` | 触发 MediaScanner 重建索引 |
 | `POST` | `/delete/<id>` | 删除指定媒体 |
 | `GET` | `/log` | 排障日志回读（环形缓冲） |
 | `GET` | `/diag` | 环境诊断 |

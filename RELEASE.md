@@ -120,7 +120,7 @@ KT="<Android Studio JBR 或 JDK>/bin/keytool"
 | 备份开关 | `android:allowBackup="false"` |
 | 监听地址 | **仅回环**：同时绑定 `127.0.0.1`(IPv4) 与 `::1`(IPv6)，局域网内不可达 |
 | 访问令牌 | 进程启动时 `SecureRandom` 随机生成（非固定常量） |
-| 版本号 | `versionCode=1` / `versionName=1.0.0` |
+| 版本号 | `versionCode=3` / `versionName=1.0.2`（1.0.2：转码音频流式 remux / 任务表与 probe 缓存上限 / HTTP 线程池 3 / 续转内存门禁） |
 
 **刻意没做（附理由）**
 
@@ -149,6 +149,6 @@ sha256sum "$A"
 
 ## 7. 版本策略
 
-当前 `versionCode=1` / `versionName=1.0.0`。
+当前 `versionCode=3` / `versionName=1.0.2`。
 **每次对外发布都要递增 `versionCode`**（改 `AndroidManifest.xml`），`versionName` 按语义化版本递进。
 签名不变则用户可无感覆盖升级。

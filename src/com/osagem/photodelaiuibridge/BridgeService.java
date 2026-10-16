@@ -31,6 +31,8 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.io.File;
+
 /**
  * 常驻前台服务：保持本机 HTTP 桥在线，供 AIUI 智能体随时访问。
  */
@@ -93,6 +95,52 @@ public class BridgeService extends Service {
     public void onCreate() {
         super.onCreate();
         sCtx = getApplicationContext();
+        cleanupOrphanTempFiles();
+        // ★ LMK 杀进程后的重启（START_STICKY）：把死前未完成的转码任务自动续上。
+        //   首次延迟 5s：给系统从内存紧张中缓一口气，也避免和启动流程抢 IO。
+        //   ★ 带重试：Transcoder.reenqueuePending 有内存门禁（MemAvailable < 384MB 暂缓），
+        //     低水位时每 60s 重查一次，最多 10 次（~10 分钟）；门禁避免了
+        //     「续转→LMK 杀→重启→再续转」的死循环（2026-10-16 实测 6~7 秒被杀一轮）。
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException ignored) {
+                }
+                for (int i = 0; i < 10; i++) {
+                    try {
+                        if (Transcoder.reenqueuePending()) return; // 无待办或已全部续上
+                    } catch (Throwable t) {
+                        Log.w(BridgeServer.TAG, "reenqueue failed: " + t);
+                        return;
+                    }
+                    try {
+                        Thread.sleep(60_000);
+                    } catch (InterruptedException ignored) {
+                        return;
+                    }
+                }
+            }
+        }, "reenqueue-transcode").start();
+    }
+
+    /**
+     * 清理转码缓存目录里的孤儿 .tmp：转码产物先写 .tmp 再原子改名，进程被杀（如覆盖安装）
+     * 会留下半截文件 —— 它们不匹配任何缓存名，永远无人引用，启动时直接删掉。
+     */
+    private void cleanupOrphanTempFiles() {
+        try {
+            File[] fs = Transcoder.cacheDir().listFiles();
+            if (fs == null) return;
+            int n = 0;
+            for (File f : fs) {
+                if (f.getName().endsWith(".tmp") && f.delete()) n++;
+            }
+            if (n > 0) BridgeServer.log("启动清理孤儿转码临时文件 " + n + " 个");
+        } catch (Throwable t) {
+            Log.w(BridgeServer.TAG, "cleanup tmp failed: " + t);
+        }
     }
 
     @Override

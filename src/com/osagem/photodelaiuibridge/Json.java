@@ -56,6 +56,11 @@ public final class Json {
         return q(k) + ":" + v;
     }
 
+    /** 小数：统一用 Locale.US 格式化，避免某些区域把小数点写成逗号导致 JSON 非法 */
+    public static String kv(String k, double v) {
+        return q(k) + ":" + String.format(java.util.Locale.US, "%.3f", v);
+    }
+
     public static String kv(String k, boolean v) {
         return q(k) + ":" + (v ? "true" : "false");
     }

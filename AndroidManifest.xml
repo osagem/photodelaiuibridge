@@ -21,8 +21,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.osagem.photodelaiuibridge"
-    android:versionCode="1"
-    android:versionName="1.0.0">
+    android:versionCode="3"
+    android:versionName="1.0.2">
 
     <!-- 本机回环 HTTP 服务需要 INTERNET 权限（Android 上创建 socket 需要 inet gid） -->
     <uses-permission android:name="android.permission.INTERNET" />

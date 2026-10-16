@@ -54,13 +54,23 @@ import java.util.concurrent.Executors;
  *   GET  /info                 权限 / 存储 / 媒体统计
  *   GET  /list                 媒体清单（文件系统枚举，非 MediaStore）
  *   GET  /media/<id>           原始字节流（支持 Range，供 <video> 拖动）
+ *   GET  /media/<id>?fmt=avc   **可播版本**：源是 H.264 时即原文件；源是 HEVC 时吐转码缓存，
+ *                              缓存不存在则返回 409 + need-transcode（避免播放器拿到必然失败的流）
  *   GET  /thumb/<id>?w=480     缩略图（JPEG）
- *   GET  /delete/<id>          删除（真删文件；视频连带同名 .txt）
+ *   GET  /delete/<id>          删除（真删文件；视频连带同名 .txt 与其转码缓存）
  *   POST /delete?id=<id>       同上
+ *   GET  /probe/<id>           可播性探测（容器/编码/旋转/时长/目标尺寸/是否已有缓存）
+ *   GET|POST /transcode/<id>   提交转码任务（幂等；异步，立即返回）
+ *   GET  /transcode/status/<id> 轮询进度（state/progress/processedMs/speedX/error）
+ *   GET  /transcode/cancel/<id> 取消任务
+ *   GET  /cache                转码缓存用量；POST /cache/purge 按 LRU 清理
  *   POST /scan                 触发 MediaScanner 重建索引
  *   GET  /diag                 目录体检（排查「照片看不见」）
  *   POST /log?m=xxx            智能体→PC 回读通道（环形缓冲）
  *   GET  /log                  取回缓冲
+ *
+ * 为什么需要转码：AIUI 运行时的自研 MP4 管线只认 H.264/AVC + AAC-LC 的 progressive MP4，
+ * 而眼镜实拍视频是 HEVC —— 详见 {@link Transcoder} 与 docs/AIUI-视频转码-落地方案.md。
  *
  * 安全：**只绑定回环地址 127.0.0.1**（局域网内不可达）；即便请求来自非回环来源，
  *       也必须携带 X-Bridge-Token —— 令牌由 BridgeService 在进程启动时随机生成，不是固定值。
@@ -109,7 +119,9 @@ public class BridgeServer {
             throw (lastErr != null ? lastErr : new IOException("no loopback address available"));
         }
         running = true;
-        pool = Executors.newFixedThreadPool(8);
+        // 单客户端场景（AIUI 智能体）：3 线程足够（列表/媒体流/轮询可并行），
+        // 每线程省下 ~1MB 栈保留与相应触页内存（2026-10-16 内存收敛，原 8）。
+        pool = Executors.newFixedThreadPool(3);
         for (final ServerSocket ss : servers) {
             Thread t = new Thread(new Runnable() {
                 @Override
@@ -288,7 +300,45 @@ public class BridgeServer {
         }
 
         if (path.startsWith("/media/")) {
-            serveFile(out, headers, decodeId(path.substring("/media/".length())), false);
+            String mid = decodeId(path.substring("/media/".length()));
+            if ("avc".equalsIgnoreCase(params.get("fmt"))) {
+                servePlayable(out, headers, mid);
+            } else {
+                serveFile(out, headers, mid, false);
+            }
+            return;
+        }
+
+        if (path.startsWith("/probe/")) {
+            doProbe(out, decodeId(path.substring("/probe/".length())));
+            return;
+        }
+
+        // 注意：更具体的子路径必须先判，否则会被 /transcode/<id> 吃掉
+        if (path.startsWith("/transcode/status/")) {
+            doTranscodeStatus(out, decodeId(path.substring("/transcode/status/".length())));
+            return;
+        }
+
+        if (path.startsWith("/transcode/cancel/")) {
+            doTranscodeCancel(out, decodeId(path.substring("/transcode/cancel/".length())));
+            return;
+        }
+
+        if (path.startsWith("/transcode/")) {
+            doTranscode(out, decodeId(path.substring("/transcode/".length())), params);
+            return;
+        }
+
+        if ("/cache".equals(path)) {
+            json(out, buildCache());
+            return;
+        }
+
+        if ("/cache/purge".equals(path)) {
+            long freed = Transcoder.purgeCache();
+            json(out, "{" + Json.kv("ok", true) + "," + Json.kv("freedBytes", freed) + ","
+                    + Json.kv("bytes", Transcoder.cacheBytes()) + "}");
             return;
         }
 
@@ -516,6 +566,163 @@ public class BridgeServer {
         return "{" + Json.kv("ok", true) + "," + Json.kv("scanned", paths.length) + "}";
     }
 
+    /* ---------------------- 转码 / 可播性 ---------------------- */
+
+    /** `GET /probe/<id>`：可播性探测（毫秒级，不开解码器） */
+    private void doProbe(OutputStream out, String id) throws IOException {
+        File f = MediaIndex.fileOf(id);
+        if (f == null || !f.exists() || !f.isFile()) {
+            json(out, "{" + Json.kv("ok", false) + "," + Json.kv("error", "not found") + "}");
+            return;
+        }
+        if (!MediaIndex.isVideo(f)) {
+            json(out, "{" + Json.kv("ok", true) + "," + Json.kv("id", id) + ","
+                    + Json.kv("type", "photo") + "," + Json.kv("playable", true) + ","
+                    + Json.kv("reason", (String) null) + "," + Json.kv("transcoded", false) + "}");
+            return;
+        }
+        Transcoder.Info info = Transcoder.probe(f);
+        File cache = info.playable ? null : Transcoder.cachedFor(f);
+        Transcoder.Job job = Transcoder.status(f);
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append(Json.kv("ok", true)).append(",");
+        sb.append(Json.kv("id", id)).append(",");
+        sb.append(Json.kv("type", "video")).append(",");
+        sb.append(Json.kv("container", info.container)).append(",");
+        sb.append(Json.kv("videoCodec", info.videoCodec)).append(",");
+        sb.append(Json.kv("audioCodec", info.audioCodec)).append(",");
+        sb.append(Json.kv("playable", info.playable)).append(",");
+        sb.append(Json.kv("reason", info.reason)).append(",");
+        sb.append(Json.kv("durationMs", info.durationUs / 1000)).append(",");
+        sb.append(Json.kv("width", info.width)).append(",");
+        sb.append(Json.kv("height", info.height)).append(",");
+        sb.append(Json.kv("rotation", info.rotation)).append(",");
+        sb.append(Json.kv("frameRate", info.frameRate)).append(",");
+        sb.append(Json.kv("bitrate", info.bitrate)).append(",");
+        sb.append(Json.kv("audioSampleRate", info.audioSampleRate)).append(",");
+        sb.append(Json.kv("audioChannels", info.audioChannels)).append(",");
+        sb.append(Json.kv("outWidth", info.outWidth)).append(",");
+        sb.append(Json.kv("outHeight", info.outHeight)).append(",");
+        sb.append(Json.kv("transcoded", cache != null)).append(",");
+        sb.append(Json.kv("cacheBytes", cache != null ? cache.length() : 0)).append(",");
+        sb.append(Json.kv("jobState", job == null ? Transcoder.STATE_NONE : job.state)).append(",");
+        sb.append(Json.kv("progress", job == null ? 0 : job.progress));
+        sb.append("}");
+        json(out, sb.toString());
+    }
+
+    /** `GET|POST /transcode/<id>`：提交转码任务（幂等、异步） */
+    private void doTranscode(OutputStream out, String id, Map<String, String> params)
+            throws IOException {
+        File f = MediaIndex.fileOf(id);
+        if (f == null || !f.exists() || !f.isFile()) {
+            json(out, "{" + Json.kv("ok", false) + "," + Json.kv("error", "not found") + "}");
+            return;
+        }
+        if (!MediaIndex.isVideo(f)) {
+            json(out, "{" + Json.kv("ok", false) + "," + Json.kv("error", "not a video") + "}");
+            return;
+        }
+        Transcoder.Job job = Transcoder.submit(f, isTrue(params.get("force")));
+        File cache = Transcoder.cachedFor(f);
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append(Json.kv("ok", true)).append(",");
+        sb.append(Json.kv("jobId", job.id)).append(",");
+        sb.append(Json.kv("state", job.state)).append(",");
+        sb.append(Json.kv("queuePosition", 0)).append(",");
+        sb.append(Json.kv("outWidth", job.outWidth)).append(",");
+        sb.append(Json.kv("outHeight", job.outHeight)).append(",");
+        sb.append(Json.kv("cacheBytes", cache != null ? cache.length() : 0));
+        if (job.error != null) sb.append(",").append(Json.kv("error", job.error));
+        sb.append("}");
+        json(out, sb.toString());
+    }
+
+    /** `GET /transcode/status/<id>`：轮询进度 */
+    private void doTranscodeStatus(OutputStream out, String id) throws IOException {
+        File f = MediaIndex.fileOf(id);
+        if (f == null || !f.exists() || !f.isFile()) {
+            json(out, "{" + Json.kv("ok", false) + "," + Json.kv("error", "not found") + "}");
+            return;
+        }
+        Transcoder.Job job = Transcoder.status(f);
+        if (job == null) {
+            json(out, "{" + Json.kv("ok", true) + "," + Json.kv("id", id) + ","
+                    + Json.kv("state", Transcoder.STATE_NONE) + "}");
+            return;
+        }
+        File cache = Transcoder.cachedFor(f);
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append(Json.kv("ok", true)).append(",");
+        sb.append(Json.kv("id", id)).append(",");
+        sb.append(Json.kv("jobId", job.id)).append(",");
+        sb.append(Json.kv("state", job.state)).append(",");
+        sb.append(Json.kv("progress", job.progress)).append(",");
+        sb.append(Json.kv("processedMs", job.processedMs)).append(",");
+        sb.append(Json.kv("durationMs", job.durationMs)).append(",");
+        sb.append(Json.kv("outBytes", job.outBytes)).append(",");
+        sb.append(Json.kv("elapsedMs", job.elapsedMs)).append(",");
+        sb.append(Json.kv("speedX", Transcoder.speedX(job))).append(",");
+        sb.append(Json.kv("outWidth", job.outWidth)).append(",");
+        sb.append(Json.kv("outHeight", job.outHeight)).append(",");
+        sb.append(Json.kv("cacheBytes", cache != null ? cache.length() : 0)).append(",");
+        sb.append(Json.kv("error", job.error));
+        sb.append("}");
+        json(out, sb.toString());
+    }
+
+    /** `GET /transcode/cancel/<id>`：取消任务 */
+    private void doTranscodeCancel(OutputStream out, String id) throws IOException {
+        File f = MediaIndex.fileOf(id);
+        if (f == null || !f.exists()) {
+            json(out, "{" + Json.kv("ok", false) + "," + Json.kv("error", "not found") + "}");
+            return;
+        }
+        Transcoder.Job job = Transcoder.cancel(f);
+        json(out, "{" + Json.kv("ok", true) + ","
+                + Json.kv("state", job == null ? Transcoder.STATE_NONE : job.state) + "}");
+    }
+
+    /** `GET /cache`：缓存用量 */
+    private String buildCache() {
+        return "{" + Json.kv("ok", true) + ","
+                + Json.kv("dir", Transcoder.cacheDir().getAbsolutePath()) + ","
+                + Json.kv("files", Transcoder.cacheFiles()) + ","
+                + Json.kv("bytes", Transcoder.cacheBytes()) + ","
+                + Json.kv("limitBytes", Transcoder.CACHE_LIMIT_BYTES) + "}";
+    }
+
+    /** `/media/<id>?fmt=avc`：只吐"运行时确实能播"的版本 */
+    private void servePlayable(OutputStream out, Map<String, String> headers, String id)
+            throws IOException {
+        File f = MediaIndex.fileOf(id);
+        if (f == null || !f.exists() || !f.isFile()) {
+            writeSimple(out, 404, "application/json",
+                    "{\"ok\":false,\"error\":\"not found\"}".getBytes("UTF-8"));
+            return;
+        }
+        if (MediaIndex.isVideo(f)) {
+            Transcoder.Info info = Transcoder.probe(f);
+            if (!info.playable) {
+                File cache = Transcoder.cachedFor(f);
+                if (cache != null) {
+                    serveFileObj(out, headers, cache, false);
+                    return;
+                }
+                // 明确告诉调用方"先转码"，别让 <video> 去撞必然失败的原始 HEVC 流
+                writeSimple(out, 409, "application/json",
+                        ("{" + Json.kv("ok", false) + ","
+                                + Json.kv("reason", "need-transcode") + ","
+                                + Json.kv("videoCodec", info.videoCodec) + "}").getBytes("UTF-8"));
+                return;
+            }
+        }
+        serveFileObj(out, headers, f, false);
+    }
+
     private void doDelete(OutputStream out, String id, Socket s) throws IOException {
         if (id == null || id.isEmpty()) {
             json(out, "{" + Json.kv("ok", false) + "," + Json.kv("error", "missing id") + "}");
@@ -546,6 +753,15 @@ public class BridgeServer {
                     BridgeService.appContext(), ps.toArray(new String[0]), null, null);
         } catch (Throwable ignored) {
         }
+        // 源没了，对应的转码缓存与任务/探测缓存一并清掉（避免留下孤儿文件）
+        if (ok) {
+            try {
+                Transcoder.forget(f);
+                Transcoder.dropCacheFor(f);
+            } catch (Throwable t) {
+                Log.w(TAG, "drop transcode cache failed: " + t);
+            }
+        }
         log((ok ? "删除成功 " : "删除失败 ") + path + (txtDeleted ? " (+同名txt)" : ""));
         json(out, "{" + Json.kv("ok", ok) + "," + Json.kv("existed", existed) + ","
                 + Json.kv("path", path) + "," + Json.kv("type", isVideo ? "video" : "photo") + ","
@@ -562,6 +778,12 @@ public class BridgeServer {
                     "{\"ok\":false,\"error\":\"not found\"}".getBytes("UTF-8"));
             return;
         }
+        serveFileObj(out, headers, f, headOnly);
+    }
+
+    /** 任意文件的字节流（支持 Range 206）。转码缓存也走这里，只是文件来源不同。 */
+    private void serveFileObj(OutputStream out, Map<String, String> headers, File f, boolean headOnly)
+            throws IOException {
         long len = f.length();
         String range = headers.get("range");
         long start = 0;
@@ -725,6 +947,7 @@ public class BridgeServer {
             case 400: return "Bad Request";
             case 403: return "Forbidden";
             case 404: return "Not Found";
+            case 409: return "Conflict";
             case 416: return "Range Not Satisfiable";
             case 500: return "Internal Server Error";
             default:  return "OK";
